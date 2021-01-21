@@ -222,12 +222,10 @@ cdef class Splitter:
 
         pass
 
-    #cdef void node_value(self, double* dest, double* log_dest) nogil:
-    cdef void node_value(self, double* dest) nogil:
+    cdef void node_value(self, double* dest, double* log_dest) nogil:
         """Copy the value of node samples[start:end] into dest."""
 
-        #self.criterion.node_value(dest, log_dest)
-        self.criterion.node_value(dest)
+        self.criterion.node_value(dest, log_dest)
 
     cdef double node_impurity(self) nogil:
         """Return the impurity of the current node."""

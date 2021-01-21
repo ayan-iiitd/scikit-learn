@@ -1,0 +1,9 @@
+Obtaining file:///home/ayan/IS_VK/sklearn_conda/scikit-learn
+    Preparing wheel metadata: started
+    Preparing wheel metadata: finished with status 'done'
+Requirement already satisfied: threadpoolctl>=2.0.0 in /home/ayan/.conda/envs/sklearndev/lib/python3.8/site-packages (from scikit-learn==1.0.dev0) (2.1.0)
+Requirement already satisfied: scipy>=0.19.1 in /home/ayan/.conda/envs/sklearndev/lib/python3.8/site-packages (from scikit-learn==1.0.dev0) (1.5.2)
+Requirement already satisfied: numpy>=1.13.3 in /home/ayan/.conda/envs/sklearndev/lib/python3.8/site-packages (from scikit-learn==1.0.dev0) (1.19.2)
+Requirement already satisfied: joblib>=0.11 in /home/ayan/.conda/envs/sklearndev/lib/python3.8/site-packages (from scikit-learn==1.0.dev0) (1.0.0)
+Installing collected packages: scikit-learn
+  Running setup.py develop for scikit-learn

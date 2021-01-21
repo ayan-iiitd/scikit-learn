@@ -13,11 +13,9 @@
 #          Fares Hedayati <fares.hedayati@gmail.com>
 #          Jacob Schreiber <jmschreiber91@gmail.com>
 #          Nelson Liu <nelson@nelsonliu.me>
-#          Saif Ayan Khan <saifk@iiitd.ac.in>
 #
 # License: BSD 3 clause
 
-from libc.stdio cimport printf
 from libc.stdlib cimport calloc
 from libc.stdlib cimport free
 from libc.string cimport memcpy
@@ -51,13 +49,7 @@ cdef class Criterion:
         free(self.sum_total)
         free(self.sum_left)
         free(self.sum_right)
-        
-        #variables for sum of log for gamma
 
-        #free(self.log_sum_total)
-        #free(self.log_sum_left)
-        #free(self.log_sum_right)
-    
     def __getstate__(self):
         return {}
 
@@ -129,13 +121,8 @@ cdef class Criterion:
         """
         pass
 
-    #cdef void children_impurity(self, double* impurity_left,
-    #                            double* impurity_right) nogil:
-
     cdef void children_impurity(self, double* impurity_left,
-                                double* impurity_right,
-                                double* log_impurity_left,
-                                double* log_impurity_right) nogil:
+                                double* impurity_right) nogil:
         """Placeholder for calculating the impurity of children.
 
         Placeholder for a method which evaluates the impurity in
@@ -153,7 +140,6 @@ cdef class Criterion:
         """
         pass
 
-    #cdef void node_value(self, double* dest, double* log_dest) nogil:
     cdef void node_value(self, double* dest) nogil:
         """Placeholder for storing the node value.
 
@@ -164,10 +150,6 @@ cdef class Criterion:
         ----------
         dest : double pointer
             The memory address where the node value should be stored.
-
-        self added - 
-        log_dest : double pointer
-            The memory address where the node value of log sum should be stored.
         """
         pass
 
@@ -184,9 +166,7 @@ cdef class Criterion:
         """
         cdef double impurity_left
         cdef double impurity_right
-        cdef double log_impurity_left
-        cdef double log_impurity_right
-        self.children_impurity(&impurity_left, &impurity_right, &log_impurity_left, &log_impurity_right)
+        self.children_impurity(&impurity_left, &impurity_right)
 
         return (- self.weighted_n_right * impurity_right
                 - self.weighted_n_left * impurity_left)
@@ -228,12 +208,6 @@ cdef class Criterion:
                                     self.weighted_n_node_samples * impurity_left)))
 
 
-    
-
-    
-    
-
-'''
 cdef class ClassificationCriterion(Criterion):
     """Abstract criterion for classification."""
 
@@ -704,13 +678,7 @@ cdef class Gini(ClassificationCriterion):
 
         impurity_left[0] = gini_left / self.n_outputs
         impurity_right[0] = gini_right / self.n_outputs
-'''
 
-
-        
-
-
-        
 
 cdef class RegressionCriterion(Criterion):
     r"""Abstract regression criterion.
@@ -752,38 +720,20 @@ cdef class RegressionCriterion(Criterion):
 
         self.sq_sum_total = 0.0
 
-        ### variables for sum of log for gamma
-        self.log_sum_total = 0.0
-
         # Allocate accumulators. Make sure they are NULL, not uninitialized,
         # before an exception can be raised (which triggers __dealloc__).
         self.sum_total = NULL
         self.sum_left = NULL
         self.sum_right = NULL
 
-        ### variables for sum of log for gamma
-        #self.log_sum_total = NULL
-        #self.log_sum_left = NULL
-        #self.log_sum_right = NULL
-
         # Allocate memory for the accumulators
         self.sum_total = <double*> calloc(n_outputs, sizeof(double))
         self.sum_left = <double*> calloc(n_outputs, sizeof(double))
         self.sum_right = <double*> calloc(n_outputs, sizeof(double))
 
-        ### variables for sum of log for gamma
-        #self.log_sum_total = <double*> calloc(n_outputs, sizeof(double))
-        #self.log_sum_right = <double*> calloc(n_outputs, sizeof(double))
-        #self.log_sum_right = <double*> calloc(n_outputs, sizeof(double))
-
         if (self.sum_total == NULL or
                 self.sum_left == NULL or
                 self.sum_right == NULL):
-        #if (self.sum_total == NULL or
-        #        self.sum_left == NULL or
-        #        self.sum_right == NULL or
-        #        self.log_sum_left == NULL or
-        #        self.log_sum_right == NULL):
             raise MemoryError()
 
     def __reduce__(self):
@@ -805,7 +755,7 @@ cdef class RegressionCriterion(Criterion):
         self.end = end
         self.n_node_samples = end - start
         self.weighted_n_samples = weighted_n_samples
-        self.weighted_n_node_samples = 0.0
+        self.weighted_n_node_samples = 0.
 
         cdef SIZE_t i
         cdef SIZE_t p
@@ -815,9 +765,7 @@ cdef class RegressionCriterion(Criterion):
         cdef DOUBLE_t w = 1.0
 
         self.sq_sum_total = 0.0
-        self.log_sum_total = 0.0
         memset(self.sum_total, 0, self.n_outputs * sizeof(double))
-        #memset(self.log_sum_total, 0, self.n_outputs * sizeof(double))
 
         for p in range(start, end):
             i = samples[p]
@@ -829,12 +777,6 @@ cdef class RegressionCriterion(Criterion):
                 y_ik = self.y[i, k]
                 w_y_ik = w * y_ik
                 self.sum_total[k] += w_y_ik
-
-                ### log sum in array
-                #self.log_sum_total[k] += log(w_y_ik)
-                
-                self.log_sum_total += log(w_y_ik)
-
                 self.sq_sum_total += w_y_ik * y_ik
 
             self.weighted_n_node_samples += w
@@ -860,10 +802,6 @@ cdef class RegressionCriterion(Criterion):
         memset(self.sum_right, 0, n_bytes)
         memcpy(self.sum_left, self.sum_total, n_bytes)
 
-        ### for log sums
-        #memset(self.log_sum_right, 0, n_bytes)
-        #memcpy(self.log_sum_left, self.log_sum_total, n_bytes)
-
         self.weighted_n_right = 0.0
         self.weighted_n_left = self.weighted_n_node_samples
         self.pos = self.end
@@ -874,11 +812,6 @@ cdef class RegressionCriterion(Criterion):
         cdef double* sum_left = self.sum_left
         cdef double* sum_right = self.sum_right
         cdef double* sum_total = self.sum_total
-
-        ### for log
-        #cdef double* log_sum_left = self.log_sum_left
-        #cdef double* log_sum_right = self.log_sum_right
-        #cdef double* log_sum_total = self.log_sum_total
 
         cdef double* sample_weight = self.sample_weight
         cdef SIZE_t* samples = self.samples
@@ -907,9 +840,6 @@ cdef class RegressionCriterion(Criterion):
                 for k in range(self.n_outputs):
                     sum_left[k] += w * self.y[i, k]
 
-                    ### log sum
-                    #log_sum_left[k] += log(w * self.y[i, k])
-
                 self.weighted_n_left += w
         else:
             self.reverse_reset()
@@ -923,9 +853,6 @@ cdef class RegressionCriterion(Criterion):
                 for k in range(self.n_outputs):
                     sum_left[k] -= w * self.y[i, k]
 
-                    #log sum
-                    sum_left[k] -= log(w * self.y[i, k])
-
                 self.weighted_n_left -= w
 
         self.weighted_n_right = (self.weighted_n_node_samples -
@@ -933,21 +860,16 @@ cdef class RegressionCriterion(Criterion):
         for k in range(self.n_outputs):
             sum_right[k] = sum_total[k] - sum_left[k]
 
-            ### log sum
-            #log_sum_right[k] = log_sum_total[k] - log_sum_left[k]
-
         self.pos = new_pos
         return 0
 
     cdef double node_impurity(self) nogil:
         pass
 
-    #cdef void children_impurity(self, double* impurity_left,
-    #                            double* impurity_right) nogil:
-    cdef void children_impurity(self, double* impurity_left, double* impurity_right, double* log_impurity_left, double* log_impurity_right) nogil:
+    cdef void children_impurity(self, double* impurity_left,
+                                double* impurity_right) nogil:
         pass
 
-    #cdef void node_value(self, double* dest, double* log_dest) nogil:
     cdef void node_value(self, double* dest) nogil:
         """Compute the node value of samples[start:end] into dest."""
         cdef SIZE_t k
@@ -955,174 +877,7 @@ cdef class RegressionCriterion(Criterion):
         for k in range(self.n_outputs):
             dest[k] = self.sum_total[k] / self.weighted_n_node_samples
 
-            # log sum
-            #log_dest[k] = self.log_sum_total[k] / self.weighted_n_node_samples
 
-            
-cdef class Self(RegressionCriterion):
-    """Mean squared error impurity criterion.
-
-        MSE = var_left + var_right
-
-        *** Changed to Gamma
-    """
-    
-    cdef double node_impurity(self) nogil:
-        """Evaluate the impurity of the current node.
-
-        Evaluate the MSE criterion as impurity of the current node,
-        i.e. the impurity of samples[start:end]. The smaller the impurity the
-        better.
-        """
-        cdef double* sum_total = self.sum_total
-
-        #cdef double* log_sum_total = self.log_sum_total
-
-        cdef double impurity
-
-        cdef double log_impurity
-
-        cdef SIZE_t k
-
-
-        ### averagin square sum
-        impurity = self.sq_sum_total / self.weighted_n_node_samples
-        
-        log_impurity = 2 * self.log_sum_total / self.weighted_n_node_samples
-        
-        for k in range(self.n_outputs):
-
-            ##subtracting squared of total
-            impurity -= (sum_total[k] / self.weighted_n_node_samples)**2.0
-
-            log_impurity -= 2 * log(sum_total[k] / self.weighted_n_node_samples)
-        
-        #printf('impurity - %f\n', impurity)
-        #printf("***********************\n")
-
-        return impurity / self.n_outputs
-
-    cdef double proxy_impurity_improvement(self) nogil:
-        """Compute a proxy of the impurity reduction.
-
-        This method is used to speed up the search for the best split.
-        It is a proxy quantity such that the split that maximizes this value
-        also maximizes the impurity improvement. It neglects all constant terms
-        of the impurity decrease for a given split.
-
-        The absolute impurity improvement is only computed by the
-        impurity_improvement method once the best split has been found.
-        """
-        cdef double* sum_left = self.sum_left
-        cdef double* sum_right = self.sum_right
-        
-        #cdef double* log_sum_left = self.log_sum_left
-        #cdef double* log_sum_right = self.log_sum_right
-
-        cdef SIZE_t k
-        cdef double proxy_impurity_left = 0.0
-        cdef double proxy_impurity_right = 0.0
-
-        cdef double log_proxy_impurity_left = 0.0
-        cdef double log_proxy_impurity_right = 0.0
-
-        for k in range(self.n_outputs):
-
-            ## squaring a side and adding it
-            proxy_impurity_left += sum_left[k] * sum_left[k]
-            proxy_impurity_right += sum_right[k] * sum_right[k]
-
-            #log_proxy_impurity_left += log(log_sum_left[k])
-            #log_proxy_impurity_right += log(log_sum_right[k])
-
-        #printf("+++++++++++++++++++++\n")
-        return (proxy_impurity_left / self.weighted_n_left +
-                proxy_impurity_right / self.weighted_n_right)
-
-    #cdef void children_impurity(self, double* impurity_left,
-    #                            double* impurity_right) nogil:
-    cdef void children_impurity(self, double* impurity_left, double* impurity_right, double* log_impurity_left, double* log_impurity_right) nogil:
-        """Evaluate the impurity in children nodes.
-
-        i.e. the impurity of the left child (samples[start:pos]) and the
-        impurity the right child (samples[pos:end]).
-        """
-        cdef DOUBLE_t* sample_weight = self.sample_weight
-        cdef SIZE_t* samples = self.samples
-        cdef SIZE_t pos = self.pos
-        cdef SIZE_t start = self.start
-
-        cdef double* sum_left = self.sum_left
-        cdef double* sum_right = self.sum_right
-
-        #cdef double* log_sum_left = self.log_sum_left
-        #cdef double* log_sum_right = self.log_sum_right
-        cdef DOUBLE_t y_ik
-
-        cdef double sq_sum_left = 0.0
-        cdef double sq_sum_right
-
-        cdef double log_sum_left = 0.0
-        cdef double log_sum_right
-
-        cdef SIZE_t i
-        cdef SIZE_t p
-        cdef SIZE_t k
-        cdef DOUBLE_t w = 1.0
-
-        for p in range(start, pos):
-            i = samples[p]
-
-            if sample_weight != NULL:
-                w = sample_weight[i]
-
-            for k in range(self.n_outputs):
-                
-                y_ik = self.y[i, k]
-
-                ## squaring actual y values again
-                ## could be the first part, sum over y_i**2 upto n
-
-                ## WRITING FOR GAMMA
-                sq_sum_left += w * y_ik * y_ik
-
-                log_sum_left += log(w * y_ik)
- 
-        sq_sum_right = self.sq_sum_total - sq_sum_left
-        
-        log_sum_right = self.log_sum_total - log_sum_left
-
-        ## taking avg again
-        impurity_left[0] = sq_sum_left / self.weighted_n_left
-        impurity_right[0] = sq_sum_right / self.weighted_n_right
-
-        log_impurity_left[0] = 2 * log_sum_left / self.weighted_n_left
-        log_impurity_right[0] = 2 * log_sum_right / self.weighted_n_right
-
-        for k in range(self.n_outputs):
-            
-            ## squaring again
-            ## probably the second part where it is n*(Y_bar)**2 and sum_let or right is the first part of equation
-            impurity_left[0] -= (sum_left[k] / self.weighted_n_left) ** 2.0
-            impurity_right[0] -= (sum_right[k] / self.weighted_n_right) ** 2.0
-
-            log_impurity_left[0] = ((sum_left[k] / self.weighted_n_left) * 2.0) - log_impurity_left[0]
-            log_impurity_right[0] = ((sum_right[k] / self.weighted_n_right) * 2.0) - log_impurity_right[0]
-
-        ## taking avg again
-        impurity_left[0] /= self.n_outputs
-        impurity_right[0] /= self.n_outputs
-
-        log_impurity_left[0] /= self.n_outputs
-        log_impurity_right[0] /= self.n_outputs
-
-        
-
-
-        
-        
-        
-'''
 cdef class MSE(RegressionCriterion):
     """Mean squared error impurity criterion.
 
@@ -1704,4 +1459,3 @@ cdef class Poisson(RegressionCriterion):
 
                 poisson_loss += w * xlogy(y[i, k], y[i, k] / y_mean)
         return poisson_loss / (weight_sum * n_outputs)
-'''
